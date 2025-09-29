@@ -37,7 +37,7 @@ Navega al directorio donde descargaste el script.
 
 Ejecuta el script con el siguiente comando:
 
-.\Install-TerminalCustomization.ps1
+.\OhMyPosh 2.1 - ROSN-LR5.ps1
 
 
 Si el script no se ejecuta, asegúrate de que el ExecutionPolicy de PowerShell permita la ejecución de scripts. Puedes cambiar la política temporalmente con:
