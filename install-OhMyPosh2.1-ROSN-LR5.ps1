@@ -1,7 +1,8 @@
-# install-OhMyPosh2.1-ROSN-LR5.ps1
-# Autor: ROSN-LR5
-# Version 3.0
-# Descripción: Script para instalar y configurar Oh My Posh en Windows PowerShell 5.1 con múltiples temas.
+# Script de instalación - ROSN-LR5
+#Autor: ROSN-LR5
+#Version:3.0
+# Requisitos: Ejecutar como Administrador
+
 
 $chars = "R O S N - L R 5".ToCharArray()
 foreach ($c in $chars) {
@@ -21,7 +22,7 @@ if (-not ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdent
 }
 
 # --------------------------
-# Preparar perfil de PowerShell
+# Preparar perfil
 # --------------------------
 $ProfilePath = $PROFILE
 $ProfileDir = Split-Path -Parent $ProfilePath
@@ -37,55 +38,39 @@ if (-not (Test-Path $ProfilePath)) {
 # Backup del perfil
 # --------------------------
 $BackupPath = "$ProfilePath.backup"
-
 if (-not (Test-Path $BackupPath)) {
-    Copy-Item -Path $ProfilePath -Destination $BackupPath -Force -ErrorAction SilentlyContinue
+    Copy-Item -Path $ProfilePath -Destination $BackupPath -Force
     Write-Host "✅ Backup del perfil creado en: $BackupPath"
 } else {
     Write-Host "ℹ️ Ya existe un backup en: $BackupPath"
 }
 
 # --------------------------
-# Instalación de Oh My Posh
+# Instalar Oh My Posh
 # --------------------------
 Write-Host "`n🔧 Instalando Oh My Posh..."
 winget install JanDeDobbeleer.OhMyPosh -s winget -e --accept-source-agreements --accept-package-agreements
 
 # --------------------------
-# Instalar fuente Nerd Font
+# Instalar fuentes necesarias
 # --------------------------
-Write-Host "`n🔤 Instalando Nerd Fonts (CascadiaCode)..."
+Write-Host "`n🔤 Instalando Nerd Fonts (CascadiaCode y Meslo)..."
 oh-my-posh font install CascadiaCode
+oh-my-posh font install Meslo
 
 # --------------------------
-# Crear carpeta para temas
+# Descargar temas personalizados
 # --------------------------
 $CustomThemesPath = "$env:USERPROFILE\oh-my-posh-themes"
 New-Item -ItemType Directory -Path $CustomThemesPath -Force | Out-Null
 
-# --------------------------
-# Lista de temas válidos
-# --------------------------
 $themes = @(
-    "agnoster",
-    "atomic",
-    "cert",
-    "clean-detailed",
-    "jonnychipz",
-    "kushal",
-    "stelbent.minimal",
-    "tokyo",
-    "glowsticks",
-    "paradox",
-    "jandedobbeleer",
-    "powerlevel10k_rainbow",
-    "minimal",
-    "ys"
+    "M365Princess", "agnoster", "atomic", "cert", "clean-detailed",
+    "cloud-native-azure", "jonnychipz", "kushal", "stelbent.minimal",
+    "tokyo", "glowsticks", "paradox", "jandedobbeleer", 
+    "powerlevel10k_rainbow", "minimal", "ys"
 )
 
-# --------------------------
-# Descargar temas
-# --------------------------
 foreach ($theme in $themes) {
     $url = "https://raw.githubusercontent.com/JanDeDobbeleer/oh-my-posh/main/themes/$theme.omp.json"
     $out = "$CustomThemesPath\$theme.omp.json"
@@ -100,26 +85,36 @@ foreach ($theme in $themes) {
 Write-Host "`n🎨 Temas descargados en: $CustomThemesPath"
 
 # --------------------------
-# Agregar configuración al perfil
+# Agregar al perfil la configuración para mantener el tema
 # --------------------------
-$SetThemeFunction = @"
+$ConfigBlock = @"
+# -------------------------------
+# Configuración Oh My Posh (ROSN-LR5)
+# -------------------------------
 function Set-PoshTheme {
     param([string]`$theme)
-    `$themePath = "`$env:USERPROFILE\oh-my-posh-themes/\$theme.omp.json"
+    `$themePath = "`$env:USERPROFILE\oh-my-posh-themes\$theme.omp.json"
     if (Test-Path `$themePath) {
-        oh-my-posh init pwsh --config `$themePath | Invoke-Expression
+        `$prompt = & oh-my-posh init pwsh --config "`$themePath"
+        Invoke-Expression `$prompt
         `$env:POSH_THEME = `$theme
-        Write-Host "Tema aplicado: `$theme" -ForegroundColor Green
+        Set-Content -Path "`$env:USERPROFILE\.poshtheme" -Value `$theme
+        Write-Host "✅ Tema aplicado: `$theme" -ForegroundColor Green
     } else {
-        Write-Host "Tema no encontrado: `$theme" -ForegroundColor Red
+        Write-Host "❌ Tema no encontrado: `$theme" -ForegroundColor Red
     }
 }
-Set-PoshTheme "jandedobbeleer"
+
+# Restaurar último tema aplicado
+if (Test-Path "`$env:USERPROFILE\.poshtheme") {
+    `$lastTheme = Get-Content "`$env:USERPROFILE\.poshtheme"
+    Set-PoshTheme `$lastTheme
+} else {
+    Set-PoshTheme "jandedobbeleer"
+}
 "@
 
-Add-Content -Path $ProfilePath -Value "`n# Oh My Posh Configuration"
-Add-Content -Path $ProfilePath -Value $SetThemeFunction
-
+Add-Content -Path $ProfilePath -Value "`n$ConfigBlock"
 Write-Host "`n✅ Perfil actualizado. Tema inicial: jandedobbeleer"
 
 # --------------------------
