@@ -21,10 +21,9 @@ Este repositorio facilita la **instalación, configuración, cambio de temas y d
 1. Abre PowerShell como **Administrador**.  
 2. Ejecuta este comando para instalar todo automáticamente:
 
-```powershell
-
 irm https://raw.githubusercontent.com/ROSN-LR5/Apariencia-Perfil-PowerShell/main/install-OhMyPosh2.1-ROSN-LR5.ps1 | iex
 
+```powershell
 ⚠️ Es necesario tener winget. Si no lo tienes, instálalo desde la Microsoft Store usando “App Installer”.
 
 🎨 Temas incluidos
