@@ -1,5 +1,8 @@
-# uninstall-oh-my-posh-ROSN-LR5-fixed.ps1
-# Versión: 3.2.3 (correcciones)
+# uninstall-oh-my-posh-ROSN-LR5.ps1
+# Autor: ROSN-LR5 (entrega)
+# Versión: 3.3
+# Requisitos: PowerShell 7.x. Ejecuta como Administrador para borrar Program Files y entradas de sistema.
+
 [CmdletBinding()]
 param()
 
@@ -13,7 +16,7 @@ Write-Host "🧹 Iniciando desinstalación y limpieza Oh My Posh..." -Foreground
 $ProfilePath = $PROFILE
 $BackupPath = "$ProfilePath.backup"
 
-# 1) Restaurar perfil desde backup (si existe)
+# 1) Restaurar perfil desde backup
 if (Test-Path $BackupPath) {
     try {
         Copy-Item -Path $BackupPath -Destination $ProfilePath -Force
@@ -24,10 +27,10 @@ if (Test-Path $BackupPath) {
         Write-Host "        $_"
     }
 } else {
-    Write-Warn "⚠️ No se encontró backup del perfil en: $BackupPath"
+    Write-Warn "⚠️ No se encontró backup del perfil: $BackupPath"
 }
 
-# 2) Eliminar carpeta de temas en el perfil de usuario
+# 2) Eliminar carpeta de temas
 $Themes = Join-Path $env:USERPROFILE "oh-my-posh-themes"
 if (Test-Path $Themes) {
     try {
@@ -41,7 +44,7 @@ if (Test-Path $Themes) {
     Write-Info "ℹ️ No existe carpeta de temas: $Themes"
 }
 
-# 3) Eliminar archivo de tema persistente
+# 3) Eliminar archivo .poshtheme
 $themeStore = Join-Path $env:USERPROFILE ".poshtheme"
 if (Test-Path $themeStore) {
     try {
@@ -55,7 +58,7 @@ if (Test-Path $themeStore) {
     Write-Info "ℹ️ No existe archivo .poshtheme"
 }
 
-# 4) Eliminar bloque persistente del perfil (operación robusta)
+# 4) Eliminar bloque persistente del perfil (robusto)
 try {
     if (Test-Path $ProfilePath) {
         $content = Get-Content -Path $ProfilePath -Raw -ErrorAction SilentlyContinue
@@ -81,7 +84,7 @@ try {
     Write-Host "        $_"
 }
 
-# 5) Eliminar binarios instalados en rutas comunes (LOCALAPPDATA o ProgramFiles)
+# 5) Eliminar binarios en rutas comunes
 $localApp = [Environment]::GetFolderPath("LocalApplicationData")
 $progFiles = [Environment]::GetFolderPath("ProgramFiles")
 
@@ -101,25 +104,49 @@ foreach ($d in $possibleDirs) {
             Remove-Item -Recurse -Force -Path $d
             Write-Ok ("🗑️ Eliminado: " + $d)
         } catch {
-            Write-Warn "⚠️ Error borrando ruta. Ver detalles:"
-            Write-Host "        $d"
+            Write-Warn "⚠️ Error borrando $d"
             Write-Host "        $_"
         }
     }
 }
 
-# 6) Intentar desinstalar con winget si está instalado
+# 6) Eliminar PATH de usuario si contiene ruta instalada por este script (opcional)
+try {
+    $regName = "PATH"
+    $currentUserPath = [Environment]::GetEnvironmentVariable($regName, "User")
+    if (-not [string]::IsNullOrEmpty($currentUserPath)) {
+        $toRemove = @(
+            (Join-Path $localApp "Programs\oh-my-posh\bin"),
+            "C:\Tools\oh-my-posh\bin",
+            "C:\Tools\oh-my-posh"
+        ) | Where-Object { $_ -and $currentUserPath -like "*$_*" }
+
+        if ($toRemove.Count -gt 0) {
+            $newPath = $currentUserPath
+            foreach ($r in $toRemove) { $newPath = $newPath -replace [regex]::Escape($r), "" }
+            $newPath = ($newPath -split ';' | Where-Object { -not [string]::IsNullOrWhiteSpace($_) }) -join ';'
+            [Environment]::SetEnvironmentVariable($regName, $newPath, "User")
+            Write-Ok "✅ Se removieron entradas de PATH de usuario relacionadas."
+        } else {
+            Write-Info "ℹ️ No se detectaron entradas de PATH de usuario para remover."
+        }
+    }
+} catch {
+    Write-Warn "⚠️ Error actualizando PATH de usuario: $_"
+}
+
+# 7) Intentar desinstalar via winget si está disponible
 if (Get-Command winget -ErrorAction SilentlyContinue) {
     try {
         Write-Info "📦 Intentando desinstalación vía winget..."
         winget uninstall JanDeDobbeleer.OhMyPosh -e
-        Write-Ok "✅ Intentada desinstalación vía winget (verifica en Agregar o quitar programas)."
+        Write-Ok "✅ Intentada desinstalación vía winget."
     } catch {
         Write-Warn "⚠️ winget no pudo desinstalar automáticamente."
         Write-Host "        $_"
     }
 } else {
-    Write-Info "ℹ️ winget no disponible en este equipo. Verifica manualmente en 'Agregar o quitar programas'."
+    Write-Info "ℹ️ winget no disponible. Comprueba 'Agregar o quitar programas' si aún aparece."
 }
 
-Write-Host "`n🧽 Proceso de limpieza finalizado. Reinicia PowerShell o la terminal para aplicar cambios." -ForegroundColor Green
+Write-Ok "`n🧽 Limpieza finalizada. Reinicia PowerShell o la terminal para aplicar cambios."
