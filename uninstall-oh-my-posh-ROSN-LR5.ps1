@@ -1,24 +1,41 @@
-# uninstall-oh-my-posh.ps1
-# Reestablece todo como estaba antes
+# uninstall-oh-my-posh-ROSN-LR5.ps1
 
-Write-Host "`n🧹 Desinstalando Oh My Posh..."
+Write-Host "🧹 Desinstalando Oh My Posh..." -ForegroundColor Red
 
-# Restaurar perfil original si existe
-$BackupPath = "$PROFILE.backup"
+# Restaurar perfil
+$ProfilePath = $PROFILE
+$BackupPath = "$ProfilePath.backup"
+
 if (Test-Path $BackupPath) {
-    Copy-Item -Path $BackupPath -Destination $PROFILE -Force
+    Copy-Item -Path $BackupPath -Destination $ProfilePath -Force
+    Remove-Item -Path $BackupPath -Force -ErrorAction SilentlyContinue
     Write-Host "✅ Perfil restaurado desde el backup."
+} else {
+    Write-Host "⚠️ No se encontró backup del perfil."
 }
 
-# Borrar temas descargados
-$CustomThemesPath = "$env:USERPROFILE\oh-my-posh-themes"
-if (Test-Path $CustomThemesPath) {
-    Remove-Item -Recurse -Force -Path $CustomThemesPath
+# Eliminar temas
+$ThemesPath = "$env:USERPROFILE\oh-my-posh-themes"
+if (Test-Path $ThemesPath) {
+    Remove-Item -Recurse -Force -Path $ThemesPath
     Write-Host "🗑️ Carpetas de temas borradas."
 }
 
-# Desinstalar Oh My Posh via winget
-winget uninstall JanDeDobbeleer.OhMyPosh -e
+# Eliminar archivo de configuración persistente
+$themeStore = "$env:USERPROFILE\.poshtheme"
+if (Test-Path $themeStore) {
+    Remove-Item $themeStore -Force
+    Write-Host "🗑️ Archivo de tema actual eliminado."
+}
+
+# Desinstalar con winget
+if (Get-Command winget -ErrorAction SilentlyContinue) {
+    Write-Host "📦 Desinstalando Oh My Posh..."
+    winget uninstall JanDeDobbeleer.OhMyPosh -e
+    Write-Host "✅ Desinstalación realizada con éxito"
+} else {
+    Write-Host "⚠️ Winget no encontrado. No se pudo desinstalar automáticamente."
+}
 
 Write-Host "`n🧽 Oh My Posh desinstalado completamente."
 Write-Host "💡 Cierra y vuelve a abrir PowerShell para aplicar los cambios."
