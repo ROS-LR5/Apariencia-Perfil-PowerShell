@@ -72,8 +72,8 @@ $themes = @(
     "jandedobbeleer",
     "powerlevel10k_rainbow",
     "minimal",
-    "ys",
-
+    "ys"
+    #"default"  # Tema original
 )
 
 # Descargar temas
