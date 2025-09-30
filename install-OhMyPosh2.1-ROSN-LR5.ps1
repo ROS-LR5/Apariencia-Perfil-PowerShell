@@ -1,7 +1,7 @@
 # install-OhMyPosh2.1-ROSN-LR5.ps1
 # Autor: ROSN-LR5
-#Version: 2.9
-# Descripción: Instala y configura Oh My Posh con varios temas y opción de revertir cambios.
+# Version 3.0
+# Descripción: Script para instalar y configurar Oh My Posh en Windows PowerShell 5.1 con múltiples temas.
 
 $chars = "R O S N - L R 5".ToCharArray()
 foreach ($c in $chars) {
@@ -21,7 +21,7 @@ if (-not ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdent
 }
 
 # --------------------------
-# Verificar y preparar perfil de PowerShell
+# Preparar perfil de PowerShell
 # --------------------------
 $ProfilePath = $PROFILE
 $ProfileDir = Split-Path -Parent $ProfilePath
@@ -34,7 +34,7 @@ if (-not (Test-Path $ProfilePath)) {
 }
 
 # --------------------------
-# Backup del perfil original
+# Backup del perfil
 # --------------------------
 $BackupPath = "$ProfilePath.backup"
 
@@ -52,7 +52,7 @@ Write-Host "`n🔧 Instalando Oh My Posh..."
 winget install JanDeDobbeleer.OhMyPosh -s winget -e --accept-source-agreements --accept-package-agreements
 
 # --------------------------
-# Instalar Nerd Font
+# Instalar fuente Nerd Font
 # --------------------------
 Write-Host "`n🔤 Instalando Nerd Fonts (CascadiaCode)..."
 oh-my-posh font install CascadiaCode
@@ -64,7 +64,7 @@ $CustomThemesPath = "$env:USERPROFILE\oh-my-posh-themes"
 New-Item -ItemType Directory -Path $CustomThemesPath -Force | Out-Null
 
 # --------------------------
-# Lista de temas válidos (confirmados)
+# Lista de temas válidos
 # --------------------------
 $themes = @(
     "agnoster",
@@ -73,6 +73,7 @@ $themes = @(
     "clean-detailed",
     "jonnychipz",
     "kushal",
+    "stelbent.minimal",
     "tokyo",
     "glowsticks",
     "paradox",
@@ -92,7 +93,7 @@ foreach ($theme in $themes) {
         Invoke-WebRequest -Uri $url -OutFile $out -ErrorAction Stop
         Write-Host "✅ Tema descargado: $theme"
     } catch {
-        Write-Host "❌ No se pudo descargar el tema: $theme (posiblemente no existe)" -ForegroundColor Yellow
+        Write-Host "❌ No se pudo descargar el tema: $theme" -ForegroundColor Yellow
     }
 }
 
@@ -117,7 +118,6 @@ Set-PoshTheme "jandedobbeleer"
 "@
 
 Add-Content -Path $ProfilePath -Value "`n# Oh My Posh Configuration"
-Add-Content -Path $ProfilePath -Value "Import-Module oh-my-posh"
 Add-Content -Path $ProfilePath -Value $SetThemeFunction
 
 Write-Host "`n✅ Perfil actualizado. Tema inicial: jandedobbeleer"
@@ -126,6 +126,6 @@ Write-Host "`n✅ Perfil actualizado. Tema inicial: jandedobbeleer"
 # Final
 # --------------------------
 Write-Host "`n🎉 Instalación completada. Cierra y vuelve a abrir PowerShell o ejecuta:"
-Write-Host "`n    . $PROFILE" -ForegroundColor Cyan
+Write-Host "`n    . `$PROFILE" -ForegroundColor Cyan
 Write-Host "`nLuego puedes cambiar el tema con:"
 Write-Host "`n    Set-PoshTheme 'tokyo'" -ForegroundColor Yellow
