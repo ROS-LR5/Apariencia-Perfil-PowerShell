@@ -1,8 +1,5 @@
-# uninstall-oh-my-posh-ROSN-LR5.ps1
-# Autor: ROSN-LR5 (corrección segura)
-# Versión: 3.2.2
-# Ejecutar preferiblemente con PowerShell 7 y permisos de Administrador si desea eliminar Program Files.
-
+# uninstall-oh-my-posh-ROSN-LR5-fixed.ps1
+# Versión: 3.2.3 (correcciones)
 [CmdletBinding()]
 param()
 
@@ -58,22 +55,23 @@ if (Test-Path $themeStore) {
     Write-Info "ℹ️ No existe archivo .poshtheme"
 }
 
-# 4) Eliminar bloque persistente del perfil (operación segura)
+# 4) Eliminar bloque persistente del perfil (operación robusta)
 try {
     if (Test-Path $ProfilePath) {
-        $content = Get-Content -Path $ProfilePath -Raw -ErrorAction Stop
-
-        $startToken = '# ===== Oh My Posh Persistent Configuration ====='
-        $endToken   = '# ===== end persistent config ====='
-
-        $pattern = [System.Text.RegularExpressions.Regex]::Escape($startToken) + '.*?' + [System.Text.RegularExpressions.Regex]::Escape($endToken)
-        $newContent = [System.Text.RegularExpressions.Regex]::Replace($content, $pattern, '', [System.Text.RegularExpressions.RegexOptions]::Singleline)
-
-        if ($newContent -ne $content) {
-            Set-Content -Path $ProfilePath -Value $newContent -Force
-            Write-Ok "✅ Bloque persistente eliminado del perfil: $ProfilePath"
+        $content = Get-Content -Path $ProfilePath -Raw -ErrorAction SilentlyContinue
+        if ([string]::IsNullOrEmpty($content)) {
+            Write-Info "ℹ️ Perfil vacío o no legible: $ProfilePath"
         } else {
-            Write-Info "ℹ️ No se encontró bloque persistente en el perfil."
+            $startToken = '# ===== Oh My Posh Persistent Configuration ====='
+            $endToken   = '# ===== end persistent config ====='
+            $pattern = [System.Text.RegularExpressions.Regex]::Escape($startToken) + '.*?' + [System.Text.RegularExpressions.Regex]::Escape($endToken)
+            $newContent = [System.Text.RegularExpressions.Regex]::Replace($content, $pattern, '', [System.Text.RegularExpressions.RegexOptions]::Singleline)
+            if ($newContent -ne $content) {
+                Set-Content -Path $ProfilePath -Value $newContent -Force
+                Write-Ok "✅ Bloque persistente eliminado del perfil: $ProfilePath"
+            } else {
+                Write-Info "ℹ️ No se encontró bloque persistente en el perfil."
+            }
         }
     } else {
         Write-Warn "⚠️ Perfil no encontrado en: $ProfilePath"
@@ -84,16 +82,20 @@ try {
 }
 
 # 5) Eliminar binarios instalados en rutas comunes (LOCALAPPDATA o ProgramFiles)
+$localApp = [Environment]::GetFolderPath("LocalApplicationData")
+$progFiles = [Environment]::GetFolderPath("ProgramFiles")
+
 $possibleDirs = @(
-    Join-Path $env:LOCALAPPDATA "Programs\oh-my-posh",
-    Join-Path $env:ProgramFiles "oh-my-posh",
-    Join-Path $env:ProgramFiles "oh-my-posh\bin",
-    Join-Path $env:LOCALAPPDATA "Programs\oh-my-posh\bin",
+    Join-Path $localApp "Programs\oh-my-posh",
+    Join-Path $progFiles "oh-my-posh",
+    Join-Path $progFiles "oh-my-posh\bin",
+    Join-Path $localApp "Programs\oh-my-posh\bin",
     "C:\Tools\oh-my-posh",
     "C:\oh-my-posh"
 )
 
 foreach ($d in $possibleDirs) {
+    if ([string]::IsNullOrWhiteSpace($d)) { continue }
     if (Test-Path $d) {
         try {
             Remove-Item -Recurse -Force -Path $d
