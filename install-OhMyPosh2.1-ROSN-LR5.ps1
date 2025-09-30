@@ -78,7 +78,7 @@ $themes = @(
 
 # Descargar temas
 foreach ($theme in $themes) {
-    $url = "https://raw.githubusercontent.com/JanDeDobbeleer/oh-my-posh/main/themes/$theme.omp.json"
+    $url = "https://github.com/JanDeDobbeleer/oh-my-posh/tree/main/themes/$theme.omp.json"
     $out = "$CustomThemesPath\$theme.omp.json"
     Invoke-WebRequest -Uri $url -OutFile $out -ErrorAction SilentlyContinue
 }
