@@ -3,7 +3,7 @@
 #Version:3.0
 # Requisitos: Ejecutar como Administrador
 
-# Instalador de Oh My Posh para PowerShell 7.5 - ROSN-LR5
+# Descripción: Instala y configura Oh My Posh con persistencia del tema
 
 $chars = "R O S N - L R 5".ToCharArray()
 foreach ($c in $chars) {
@@ -12,13 +12,13 @@ foreach ($c in $chars) {
 }
 Write-Host
 Start-Sleep -Milliseconds 300
-Write-Host "🚀 Iniciando instalación de Oh My Posh..." -ForegroundColor Green
+Write-Host "🚀 Iniciando instalación de Oh My Posh con persistencia..." -ForegroundColor Green
 
 # --------------------------
-# Verificar administrador
+# Verificar permisos de Administrador
 # --------------------------
 if (-not ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")) {
-    Write-Host "❌ Este script debe ejecutarse como Administrador." -ForegroundColor Red
+    Write-Host "❌ Este script debe ejecutarse como administrador." -ForegroundColor Red
     exit
 }
 
@@ -35,7 +35,7 @@ if (-not (Test-Path $ProfilePath)) {
 }
 
 # --------------------------
-# Backup
+# Respaldar perfil
 # --------------------------
 $BackupPath = "$ProfilePath.backup"
 if (-not (Test-Path $BackupPath)) {
@@ -52,14 +52,14 @@ Write-Host "`n🔧 Instalando Oh My Posh..."
 winget install JanDeDobbeleer.OhMyPosh -s winget -e --accept-source-agreements --accept-package-agreements
 
 # --------------------------
-# Instalar Nerd Fonts
+# Instalar fuentes necesarias
 # --------------------------
 Write-Host "`n🔤 Instalando fuentes CascadiaCode y Meslo..."
 oh-my-posh font install CascadiaCode
 oh-my-posh font install Meslo
 
 # --------------------------
-# Descargar temas
+# Descargar temas personalizados
 # --------------------------
 $CustomThemesPath = "$env:USERPROFILE\oh-my-posh-themes"
 New-Item -ItemType Directory -Path $CustomThemesPath -Force | Out-Null
@@ -67,7 +67,7 @@ New-Item -ItemType Directory -Path $CustomThemesPath -Force | Out-Null
 $themes = @(
     "M365Princess", "agnoster", "atomic", "cert", "clean-detailed",
     "cloud-native-azure", "jonnychipz", "kushal", "stelbent.minimal",
-    "tokyo", "glowsticks", "paradox", "jandedobbeleer", 
+    "tokyo", "glowsticks", "paradox", "jandedobbeleer",
     "powerlevel10k_rainbow", "minimal", "ys"
 )
 
@@ -78,16 +78,18 @@ foreach ($theme in $themes) {
         Invoke-WebRequest -Uri $url -OutFile $out -ErrorAction Stop
         Write-Host "✅ Tema descargado: $theme"
     } catch {
-        Write-Host "❌ Fallo al descargar tema: $theme" -ForegroundColor Yellow
+        Write-Host "❌ No se pudo descargar el tema: $theme" -ForegroundColor Yellow
     }
 }
 
-Write-Host "`n🎨 Temas guardados en: $CustomThemesPath"
+Write-Host "`n🎨 Temas descargados en: $CustomThemesPath"
 
 # --------------------------
-# Agregar config al perfil de PowerShell 7.5
+# Configuración persistente en perfil
 # --------------------------
-$Config = @"
+$ConfigBlock = @"
+# ===== Configuración Oh My Posh Persistent =====
+
 function Set-PoshTheme {
     param([string]`$theme)
     `$themePath = "`$env:USERPROFILE\oh-my-posh-themes\$theme.omp.json"
@@ -95,26 +97,27 @@ function Set-PoshTheme {
         `$prompt = & oh-my-posh init pwsh --config "`$themePath"
         Invoke-Expression `$prompt
         `$env:POSH_THEME = `$theme
-        Set-Content "`$env:USERPROFILE\.poshtheme" -Value `$theme
+        # Guarda el tema seleccionado para la próxima sesión
+        Set-Content -Path "`$env:USERPROFILE\.poshtheme" -Value `$theme
         Write-Host "✅ Tema aplicado: `$theme" -ForegroundColor Green
     } else {
         Write-Host "❌ Tema no encontrado: `$theme" -ForegroundColor Red
     }
 }
 
-# Restaurar último tema aplicado
+# Al iniciar sesión, restaurar último tema si existe
 if (Test-Path "`$env:USERPROFILE\.poshtheme") {
     `$last = Get-Content "`$env:USERPROFILE\.poshtheme"
     Set-PoshTheme `$last
-} else {
-    Set-PoshTheme "jandedobbeleer"
 }
+
+# Fin configuración Oh My Posh
 "@
 
-Add-Content -Path $ProfilePath -Value "`n$Config"
+Add-Content -Path $ProfilePath -Value "`n$ConfigBlock"
 
-Write-Host "`n✅ Perfil actualizado para PowerShell 7.5"
-Write-Host "`n🎉 Instalación completada. Cierra y vuelve a abrir PowerShell 7.5 o ejecuta:"
+Write-Host "`n✅ Perfil actualizado con persistencia"
+Write-Host "`n🎉 Instalación completada. Cierra y vuelve a abrir PowerShell 7 o ejecuta:"
 Write-Host "`n    . $PROFILE" -ForegroundColor Cyan
 Write-Host "`nLuego puedes cambiar el tema con:"
-Write-Host "    Set-PoshTheme 'tokyo'" -ForegroundColor Yellow
+Write-Host "`n    Set-PoshTheme 'tokyo'" -ForegroundColor Yellow
