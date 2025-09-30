@@ -1,4 +1,4 @@
-# uninstall-oh-my-posh-ROSN-LR5.ps1
+# uninstall-oh-my-posh-ROSN-LR5.ps1 para PowerShell 7.5
 
 Write-Host "🧹 Desinstalando Oh My Posh..." -ForegroundColor Red
 
@@ -8,34 +8,33 @@ $BackupPath = "$ProfilePath.backup"
 
 if (Test-Path $BackupPath) {
     Copy-Item -Path $BackupPath -Destination $ProfilePath -Force
-    Remove-Item -Path $BackupPath -Force -ErrorAction SilentlyContinue
-    Write-Host "✅ Perfil restaurado desde el backup."
+    Remove-Item -Path $BackupPath -Force
+    Write-Host "✅ Perfil restaurado."
 } else {
-    Write-Host "⚠️ No se encontró backup del perfil."
+    Write-Host "⚠️ No se encontró backup del perfil original."
 }
 
-# Eliminar temas
-$ThemesPath = "$env:USERPROFILE\oh-my-posh-themes"
-if (Test-Path $ThemesPath) {
-    Remove-Item -Recurse -Force -Path $ThemesPath
-    Write-Host "🗑️ Carpetas de temas borradas."
+# Eliminar carpeta de temas
+$Themes = "$env:USERPROFILE\oh-my-posh-themes"
+if (Test-Path $Themes) {
+    Remove-Item -Recurse -Force -Path $Themes
+    Write-Host "🗑️ Carpetas de temas eliminadas."
 }
 
-# Eliminar archivo de configuración persistente
-$themeStore = "$env:USERPROFILE\.poshtheme"
-if (Test-Path $themeStore) {
-    Remove-Item $themeStore -Force
-    Write-Host "🗑️ Archivo de tema actual eliminado."
+# Eliminar .poshtheme
+$ThemeStore = "$env:USERPROFILE\.poshtheme"
+if (Test-Path $ThemeStore) {
+    Remove-Item $ThemeStore -Force
+    Write-Host "🗑️ Configuración persistente de tema eliminada."
 }
 
-# Desinstalar con winget
+# Desinstalar OMP
 if (Get-Command winget -ErrorAction SilentlyContinue) {
-    Write-Host "📦 Desinstalando Oh My Posh..."
+    Write-Host "📦 Desinstalando Oh My Posh con winget..."
     winget uninstall JanDeDobbeleer.OhMyPosh -e
-    Write-Host "✅ Desinstalación realizada con éxito"
+    Write-Host "✅ Oh My Posh eliminado con éxito."
 } else {
-    Write-Host "⚠️ Winget no encontrado. No se pudo desinstalar automáticamente."
+    Write-Host "⚠️ Winget no disponible. Desinstala manualmente si es necesario."
 }
 
-Write-Host "`n🧽 Oh My Posh desinstalado completamente."
-Write-Host "💡 Cierra y vuelve a abrir PowerShell para aplicar los cambios."
+Write-Host "`n🧽 Todo desinstalado. Reinicia PowerShell para ver los cambios."
