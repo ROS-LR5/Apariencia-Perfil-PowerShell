@@ -1,6 +1,6 @@
 # uninstall-oh-my-posh-ROSN-LR5.ps1
 # Autor: ROSN-LR5
-# Versión: 4.1
+# Versión: 4.5
 # Requisitos: PowerShell 7.x. Ejecuta como Administrador para borrar Program Files (opcional).
 [CmdletBinding()]
 param()
@@ -13,7 +13,7 @@ function Err($m){ Write-Host $m -ForegroundColor Red }
 Write-Host "🧹 Iniciando desinstalación y limpieza Oh My Posh..." -ForegroundColor Red
 
 $ProfilePath = $PROFILE
-$BackupPath = "$ProfilePath.backup"
+$BackupPath  = "$ProfilePath.backup"
 
 # 1) Restaurar perfil desde backup
 if (Test-Path $BackupPath) {
@@ -58,6 +58,12 @@ try {
             } else {
                 Info "ℹ️ No se encontró bloque persistente en el perfil."
             }
+            # eliminar guidance block si existe
+            $guideStart = '# ===== Windows Terminal and Fonts guidance ====='
+            $guideEnd   = '# ===== end guidance ====='
+            $pattern2 = [System.Text.RegularExpressions.Regex]::Escape($guideStart) + '.*?' + [System.Text.RegularExpressions.Regex]::Escape($guideEnd)
+            $newContent2 = [System.Text.RegularExpressions.Regex]::Replace($newContent, $pattern2, '', [System.Text.RegularExpressions.RegexOptions]::Singleline)
+            if ($newContent2 -ne $newContent) { Set-Content -Path $ProfilePath -Value $newContent2 -Force; Ok "✅ Guidance block eliminado del perfil." }
         }
     } else {
         Warn "⚠️ Perfil no encontrado en: $ProfilePath"
