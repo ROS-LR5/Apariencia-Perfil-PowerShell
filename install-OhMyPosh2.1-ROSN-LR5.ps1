@@ -1,14 +1,16 @@
 # install-OhMyPosh2.1-ROSN-LR5.ps1
-# Autor: ROSN-LR5
-# Ver. 2.1
-# Descripción: Instala y configura Oh My Posh con varios temas y opción de revertir cambios.
+# Autor: ROSN‑LR5
+# Version: 2.5
+# Descripción: Instala y configura Oh My Posh con temas seleccionados (manejo de errores incluido)
+
 # --------------------------
+
 $chars = "R O S N - L R 5".ToCharArray()
 foreach ($c in $chars) {
     Write-Host $c -NoNewline -ForegroundColor Cyan
     Start-Sleep -Milliseconds 150
 }
-Write-Host     # salto de línea
+Write-Host
 Start-Sleep -Milliseconds 300
 Write-Host "🚀 Iniciando instalación de Oh My Posh..." -ForegroundColor Green
 
@@ -21,7 +23,7 @@ if (-not ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdent
 }
 
 # --------------------------
-# Paso 2: Crear perfil si no existe
+# Paso 2: Asegurar existencia del perfil
 # --------------------------
 $ProfilePath = $PROFILE
 $ProfileDir = Split-Path -Parent $ProfilePath
@@ -29,13 +31,12 @@ $ProfileDir = Split-Path -Parent $ProfilePath
 if (-not (Test-Path $ProfileDir)) {
     New-Item -ItemType Directory -Path $ProfileDir -Force | Out-Null
 }
-
 if (-not (Test-Path $ProfilePath)) {
     New-Item -ItemType File -Path $ProfilePath -Force | Out-Null
 }
 
 # --------------------------
-# Paso 3: Backup de perfil original
+# Paso 3: Backup del perfil original
 # --------------------------
 $BackupPath = "$ProfilePath.backup"
 if (-not (Test-Path $BackupPath)) {
@@ -60,11 +61,12 @@ oh-my-posh font install CascadiaCode
 # --------------------------
 # Paso 6: Crear carpeta de temas personalizados
 # --------------------------
-$ThemesPath = "$env:USERPROFILE\AppData\Local\Programs\oh-my-posh\themes"
 $CustomThemesPath = "$env:USERPROFILE\oh-my-posh-themes"
 New-Item -ItemType Directory -Path $CustomThemesPath -Force | Out-Null
 
-# Lista de temas (sin "default")
+# --------------------------
+# Paso 7: Lista de temas válidos
+# --------------------------
 $themes = @(
     "agnoster",
     "atomic",
@@ -81,17 +83,24 @@ $themes = @(
     "ys"
 )
 
-# Descargar temas
+# --------------------------
+# Paso 8: Descargar temas con manejo de errores
+# --------------------------
 foreach ($theme in $themes) {
     $url = "https://raw.githubusercontent.com/JanDeDobbeleer/oh-my-posh/main/themes/$theme.omp.json"
     $out = "$CustomThemesPath\$theme.omp.json"
-    Invoke-WebRequest -Uri $url -OutFile $out -ErrorAction SilentlyContinue
+    try {
+        Invoke-WebRequest -Uri $url -OutFile $out -ErrorAction Stop
+        Write-Host "✅ Descargado tema: $theme"
+    } catch {
+        Write-Host "❌ No se pudo descargar el tema: $theme (404 o no encontrado)" -ForegroundColor Yellow
+    }
 }
 
 Write-Host "`n🎨 Temas descargados en: $CustomThemesPath"
 
 # --------------------------
-# Paso 7: Agregar configuración al perfil
+# Paso 9: Agregar configuración al perfil
 # --------------------------
 $SetThemeFunction = @"
 function Set-PoshTheme {
@@ -115,7 +124,7 @@ Add-Content -Path $ProfilePath -Value $SetThemeFunction
 Write-Host "`n✅ Perfil actualizado. Tema inicial: jandedobbeleer"
 
 # --------------------------
-# Paso 8: Final
+# Paso 10: Final
 # --------------------------
 Write-Host "`n🎉 Instalación completada. Cierra y vuelve a abrir PowerShell o ejecuta:"
 Write-Host "`n    . $PROFILE" -ForegroundColor Cyan
