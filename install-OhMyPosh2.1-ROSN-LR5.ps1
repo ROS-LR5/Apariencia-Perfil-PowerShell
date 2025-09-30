@@ -1,7 +1,17 @@
 # install-OhMyPosh2.1-ROSN-LR5.ps1
 # Autor: ROSN-LR5
 # Ver. 2.1
+
 # Descripción: Instala y configura Oh My Posh con varios temas y opción de revertir cambios.
+
+$chars = "R O S N - L R 5".ToCharArray()
+foreach ($c in $chars) {
+    Write-Host $c -NoNewline -ForegroundColor Cyan
+    Start-Sleep -Milliseconds 150
+}
+Write-Host     # salto de línea
+Start-Sleep -Milliseconds 300
+Write-Host "🚀 Iniciando instalación de Oh My Posh..." -ForegroundColor Green
 
 # --------------------------
 # Paso 1: Verificación de permisos
