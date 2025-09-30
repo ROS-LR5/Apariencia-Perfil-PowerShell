@@ -1,40 +1,40 @@
-# uninstall-oh-my-posh-ROSN-LR5.ps1 para PowerShell 7.5
+# uninstall-oh-my-posh-persist.ps1
 
-Write-Host "🧹 Desinstalando Oh My Posh..." -ForegroundColor Red
+Write-Host "🧹 Desinstalando Oh My Posh con limpieza completa..." -ForegroundColor Red
 
-# Restaurar perfil
+# Restaurar perfil original
 $ProfilePath = $PROFILE
 $BackupPath = "$ProfilePath.backup"
 
 if (Test-Path $BackupPath) {
     Copy-Item -Path $BackupPath -Destination $ProfilePath -Force
-    Remove-Item -Path $BackupPath -Force
-    Write-Host "✅ Perfil restaurado."
+    Remove-Item -Path $BackupPath -Force -ErrorAction SilentlyContinue
+    Write-Host "✅ Perfil restaurado desde backup."
 } else {
-    Write-Host "⚠️ No se encontró backup del perfil original."
+    Write-Host "⚠️ No se encontró backup del perfil."
 }
 
-# Eliminar carpeta de temas
+# Borrar carpeta de temas
 $Themes = "$env:USERPROFILE\oh-my-posh-themes"
 if (Test-Path $Themes) {
     Remove-Item -Recurse -Force -Path $Themes
-    Write-Host "🗑️ Carpetas de temas eliminadas."
+    Write-Host "🗑️ Carpetas de temas borradas."
 }
 
-# Eliminar .poshtheme
-$ThemeStore = "$env:USERPROFILE\.poshtheme"
-if (Test-Path $ThemeStore) {
-    Remove-Item $ThemeStore -Force
-    Write-Host "🗑️ Configuración persistente de tema eliminada."
+# Borrar archivo de tema persistente
+$themeStore = "$env:USERPROFILE\.poshtheme"
+if (Test-Path $themeStore) {
+    Remove-Item $themeStore -Force
+    Write-Host "🗑️ Archivo de tema persistente eliminado."
 }
 
-# Desinstalar OMP
+# Desinstalar Oh My Posh
 if (Get-Command winget -ErrorAction SilentlyContinue) {
-    Write-Host "📦 Desinstalando Oh My Posh con winget..."
+    Write-Host "📦 Desinstalando Oh My Posh..."
     winget uninstall JanDeDobbeleer.OhMyPosh -e
-    Write-Host "✅ Oh My Posh eliminado con éxito."
+    Write-Host "✅ Desinstalación realizada."
 } else {
-    Write-Host "⚠️ Winget no disponible. Desinstala manualmente si es necesario."
+    Write-Host "⚠️ Winget no disponible para desinstalar automáticamente."
 }
 
-Write-Host "`n🧽 Todo desinstalado. Reinicia PowerShell para ver los cambios."
+Write-Host "`n🧽 Proceso de limpieza finalizado. Reinicia PowerShell para aplicar.”
