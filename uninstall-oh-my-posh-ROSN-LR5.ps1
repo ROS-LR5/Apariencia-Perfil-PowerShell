@@ -1,55 +1,118 @@
 # uninstall-oh-my-posh-ROSN-LR5.ps1
-# Autor: ROSN-LR5 (mejora)
-# Versión: 3.2
+# Autor: ROSN-LR5 (corrección)
+# Versión: 3.2.1
+# Requisitos: PowerShell 7.x. Ejecutar como Administrador para borrar Program Files.
 
-Write-Host "🧹 Desinstalando Oh My Posh y limpiando..." -ForegroundColor Red
+[CmdletBinding()]
+param()
+
+function Write-Info($m){ Write-Host $m -ForegroundColor Cyan }
+function Write-Warn($m){ Write-Host $m -ForegroundColor Yellow }
+function Write-Ok($m){ Write-Host $m -ForegroundColor Green }
+function Write-Err($m){ Write-Host $m -ForegroundColor Red }
+
+Write-Host "🧹 Iniciando desinstalación y limpieza Oh My Posh..." -ForegroundColor Red
 
 $ProfilePath = $PROFILE
 $BackupPath = "$ProfilePath.backup"
 
-# Restaurar perfil desde backup
+# 1) Restaurar perfil desde backup (si existe)
 if (Test-Path $BackupPath) {
     try {
         Copy-Item -Path $BackupPath -Destination $ProfilePath -Force
         Remove-Item -Path $BackupPath -Force -ErrorAction SilentlyContinue
-        Write-Host "✅ Perfil restaurado desde backup."
+        Write-Ok "✅ Perfil restaurado desde backup: $BackupPath -> $ProfilePath"
     } catch {
-        Write-Host "⚠️ Error restaurando backup: $_" -ForegroundColor Yellow
+        Write-Warn "⚠️ Error restaurando perfil desde backup: $_"
     }
 } else {
-    Write-Host "⚠️ No se encontró backup del perfil." -ForegroundColor Yellow
+    Write-Warn "⚠️ No se encontró backup del perfil en: $BackupPath"
 }
 
-# Eliminar carpeta de temas
+# 2) Eliminar carpeta de temas en el perfil de usuario
 $Themes = Join-Path $env:USERPROFILE "oh-my-posh-themes"
 if (Test-Path $Themes) {
-    try { Remove-Item -Recurse -Force -Path $Themes; Write-Host "🗑️ Carpeta de temas borrada: $Themes" } catch { Write-Host "⚠️ Error borrando temas: $_" -ForegroundColor Yellow }
-} else { Write-Host "ℹ️ No existe carpeta de temas local." -ForegroundColor Cyan }
+    try {
+        Remove-Item -Recurse -Force -Path $Themes
+        Write-Ok "🗑️ Carpeta de temas borrada: $Themes"
+    } catch {
+        Write-Warn "⚠️ Error borrando carpeta de temas: $_"
+    }
+} else {
+    Write-Info "ℹ️ No existe carpeta de temas: $Themes"
+}
 
-# Eliminar .poshtheme
+# 3) Eliminar archivo de tema persistente
 $themeStore = Join-Path $env:USERPROFILE ".poshtheme"
-if (Test-Path $themeStore) { Remove-Item $themeStore -Force -ErrorAction SilentlyContinue; Write-Host "🗑️ Archivo .poshtheme eliminado." } else { Write-Host "ℹ️ No existe archivo .poshtheme." -ForegroundColor Cyan }
+if (Test-Path $themeStore) {
+    try {
+        Remove-Item -Force -Path $themeStore
+        Write-Ok "🗑️ Archivo .poshtheme eliminado: $themeStore"
+    } catch {
+        Write-Warn "⚠️ Error eliminando $themeStore: $_"
+    }
+} else {
+    Write-Info "ℹ️ No existe archivo .poshtheme"
+}
 
-# Intentar remover bin instalado en ProgramFiles o LOCALAPPDATA
+# 4) Eliminar bloque persistente del perfil (operación segura)
+try {
+    if (Test-Path $ProfilePath) {
+        $content = Get-Content -Path $ProfilePath -Raw -ErrorAction Stop
+
+        $startToken = '# ===== Oh My Posh Persistent Configuration ====='
+        $endToken   = '# ===== end persistent config ====='
+
+        # Construir patrón regex de forma segura usando Regex.Escape y Singleline
+        $pattern = [System.Text.RegularExpressions.Regex]::Escape($startToken) + '.*?' + [System.Text.RegularExpressions.Regex]::Escape($endToken)
+        $newContent = [System.Text.RegularExpressions.Regex]::Replace($content, $pattern, '', [System.Text.RegularExpressions.RegexOptions]::Singleline)
+
+        # Si cambió el contenido, guardarlo
+        if ($newContent -ne $content) {
+            Set-Content -Path $ProfilePath -Value $newContent -Force
+            Write-Ok "✅ Bloque persistente eliminado del perfil: $ProfilePath"
+        } else {
+            Write-Info "ℹ️ No se encontró bloque persistente en el perfil."
+        }
+    } else {
+        Write-Warn "⚠️ Perfil no encontrado en: $ProfilePath"
+    }
+} catch {
+    Write-Warn "⚠️ Error al procesar el perfil: $_"
+}
+
+# 5) Eliminar binarios instalados en rutas comunes (LOCALAPPDATA o ProgramFiles)
 $possibleDirs = @(
+    Join-Path $env:LOCALAPPDATA "Programs\oh-my-posh",
+    Join-Path $env:ProgramFiles "oh-my-posh",
     Join-Path $env:ProgramFiles "oh-my-posh\bin",
     Join-Path $env:LOCALAPPDATA "Programs\oh-my-posh\bin",
-    Join-Path $env:LOCALAPPDATA "Programs\oh-my-posh"
+    "C:\Tools\oh-my-posh",
+    "C:\oh-my-posh"
 )
+
 foreach ($d in $possibleDirs) {
     if (Test-Path $d) {
-        try { Remove-Item -Recurse -Force -Path $d; Write-Host "🗑️ Eliminado: $d" } catch { Write-Host "⚠️ Error borrando $d: $_" -ForegroundColor Yellow }
+        try {
+            Remove-Item -Recurse -Force -Path $d
+            Write-Ok "🗑️ Eliminado: $d"
+        } catch {
+            Write-Warn "⚠️ Error borrando $d: $_"
+        }
     }
 }
 
-# Desinstalar via winget si disponible
+# 6) Intentar desinstalar con winget si está instalado
 if (Get-Command winget -ErrorAction SilentlyContinue) {
     try {
+        Write-Info "📦 Intentando desinstalación vía winget..."
         winget uninstall JanDeDobbeleer.OhMyPosh -e
-        Write-Host "📦 Intentada desinstalación via winget."
-    } catch { Write-Host "⚠️ winget no pudo desinstalar automáticamente: $_" -ForegroundColor Yellow }
+        Write-Ok "✅ Intentada desinstalación vía winget (verifica si aparece en Agregar o quitar programas)."
+    } catch {
+        Write-Warn "⚠️ winget no pudo desinstalar automáticamente: $_"
+    }
 } else {
-    Write-Host "ℹ️ winget no disponible. Comprueba en 'Agregar o quitar programas' para desinstalar si es necesario." -ForegroundColor Cyan
+    Write-Info "ℹ️ winget no disponible en este equipo. Verifica manualmente en 'Agregar o quitar programas'."
 }
 
-Write-Host "`n🧽 Limpieza finalizada. Reinicia la terminal para aplicar cambios." -ForegroundColor Green
+Write-Host "`n🧽 Proceso de limpieza finalizado. Reinicia PowerShell o la terminal para aplicar cambios." -ForegroundColor Green
