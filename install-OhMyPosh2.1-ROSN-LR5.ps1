@@ -66,15 +66,12 @@ New-Item -ItemType Directory -Path $CustomThemesPath -Force | Out-Null
 
 # Lista de temas (sin "default")
 $themes = @(
-    "M365Princess",
     "agnoster",
     "atomic",
     "cert",
     "clean-detailed",
-    "cloud-native-azure",
     "jonnychipz",
     "kushal",
-    "stelbent.minimal",
     "tokyo",
     "glowsticks",
     "paradox",
