@@ -73,7 +73,7 @@ $themes = @(
     "powerlevel10k_rainbow",
     "minimal",
     "ys",
-    "default"  # Tema original
+
 )
 
 # Descargar temas
