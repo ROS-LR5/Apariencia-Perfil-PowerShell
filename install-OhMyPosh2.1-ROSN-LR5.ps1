@@ -1,7 +1,7 @@
 # install-oh-my-posh-ROSN-LR5.ps1
 # Autor: ROSN-LR5
-# Versión: 4.0
-# Requisitos: PowerShell 7.x. Ejecutar como Administrador para instalación en Program Files (opcional).
+# Versión: 4.1
+# Requisitos: PowerShell 7.x. Ejecuta como Administrador si deseas instalación system-wide.
 [CmdletBinding()]
 param([switch]$UserScope)
 
@@ -13,7 +13,7 @@ function Err($m){ Write-Host $m -ForegroundColor Red }
 Info "R O S N - L R 5"
 Ok "🚀 Iniciando instalación Oh My Posh (persistente)..."
 
-# 1) Preparar perfil y backup
+# --- 1) Preparar perfil y backup
 $ProfilePath = $PROFILE
 $ProfileDir = Split-Path -Parent $ProfilePath
 if (-not (Test-Path $ProfileDir)) { New-Item -ItemType Directory -Path $ProfileDir -Force | Out-Null }
@@ -27,7 +27,7 @@ if (-not (Test-Path $BackupPath)) {
     Info "ℹ️ Backup ya existe en: $BackupPath"
 }
 
-# 2) Intentar instalación oficial via winget o instalador remoto
+# --- 2) Intento oficial: winget
 $installed = $false
 $hasWinget = (Get-Command winget -ErrorAction SilentlyContinue) -ne $null
 
@@ -35,22 +35,22 @@ if ($hasWinget) {
     Info "🔧 Intentando instalar/actualizar Oh My Posh via winget..."
     try {
         if ($UserScope) {
-            winget install JanDeDobbeleer.OhMyPosh --source winget --scope user --accept-source-agreements --accept-package-agreements --silent
+            winget install JanDeDobbeleer.OhMyPosh --source winget --scope user --force --accept-source-agreements --accept-package-agreements
         } else {
-            winget install JanDeDobbeleer.OhMyPosh --source winget --scope machine --accept-source-agreements --accept-package-agreements --silent
+            winget install JanDeDobbeleer.OhMyPosh --source winget --scope machine --force --accept-source-agreements --accept-package-agreements
         }
         Start-Sleep -Seconds 2
-        if (Get-Command oh-my-posh -ErrorAction SilentlyContinue) { $installed = $true; Ok "✅ Oh My Posh instalado via winget." } else { Warn "⚠️ Winget no dejó el comando disponible en la sesión actual." }
+        if (Get-Command oh-my-posh -ErrorAction SilentlyContinue) { $installed = $true; Ok "✅ Oh My Posh instalado via winget." } else { Warn "⚠️ Winget completó pero el comando no está disponible en la sesión actual." }
     } catch {
-        Warn "⚠️ Winget falló: $_"
+        Warn "⚠️ Winget falló o no puede instalar en este sistema: $_"
     }
 } else {
-    Info "ℹ️ winget no disponible, realizaré fallback."
+    Info "ℹ️ winget no disponible, utilizaré fallback."
 }
 
-# 3) Fallback: descargar release oficial (zip) y extraer a ruta controlada
+# --- 3) Fallback: descargar release zip y extraer
 if (-not $installed) {
-    Info "⬇️ Descargando binario oficial desde GitHub Releases (fallback)..."
+    Info "⬇️ Fallback: descargando binario oficial desde GitHub Releases..."
     $InstallRoot = if ($UserScope) { Join-Path $env:LOCALAPPDATA "Programs\oh-my-posh" } else { "C:\Tools\oh-my-posh" }
     $BinDir = Join-Path $InstallRoot "bin"
     if (-not (Test-Path $BinDir)) { New-Item -ItemType Directory -Path $BinDir -Force | Out-Null }
@@ -67,7 +67,6 @@ if (-not $installed) {
         $exe = Get-ChildItem -Path $BinDir -Filter *.exe -File -ErrorAction SilentlyContinue | Select-Object -First 1
         if ($exe) {
             Copy-Item -Path $exe.FullName -Destination (Join-Path $BinDir "oh-my-posh.exe") -Force
-            # añadir a PATH de sesión
             if ($env:Path -notlike "*$BinDir*") { $env:Path = "$env:Path;$BinDir" }
             Ok "✅ oh-my-posh preparado en esta sesión: $BinDir\oh-my-posh.exe"
             $installed = $true
@@ -79,7 +78,7 @@ if (-not $installed) {
     }
 }
 
-# 4) Persistir ruta al PATH de usuario para nuevas sesiones
+# --- 4) Persistir ruta al PATH de usuario para nuevas sesiones
 if ($installed) {
     $binToPersist = if (Test-Path (Join-Path $env:LOCALAPPDATA "Programs\oh-my-posh\bin")) { Join-Path $env:LOCALAPPDATA "Programs\oh-my-posh\bin" } elseif (Test-Path $BinDir) { $BinDir } else { $null }
     if ($binToPersist) {
@@ -95,10 +94,10 @@ if ($installed) {
         }
     }
 } else {
-    Err "❌ oh-my-posh no pudo instalarse. Revisa permisos o instala manualmente."
+    Err "❌ oh-my-posh no pudo instalarse. Revisa permisos o instala manualmente desde https://ohmyposh.dev"
 }
 
-# 5) Instalar fuente recomendada Meslo (intentar via oh-my-posh, fallback descarga directa)
+# --- 5) Instalar fuente recomendada (Meslo) o intentar via oh-my-posh
 function Install-Meslo {
     try {
         $mesloZip = "https://github.com/ryanoasis/nerd-fonts/releases/latest/download/Meslo.zip"
@@ -115,10 +114,10 @@ function Install-Meslo {
             $dest = Join-Path $env:WINDIR "Fonts\$($f.Name)"
             Copy-Item -Path $f.FullName -Destination $dest -Force
         }
-        Ok "✅ Fuentes Meslo instaladas (system 폴더). Configura tu terminal para usar 'MesloLGM Nerd Font'."
+        Ok "✅ Fuentes Meslo instaladas. Configura tu terminal para usar 'MesloLGM Nerd Font'."
         return $true
     } catch {
-        Warn "⚠️ Falta instalar fuentes automáticamente: $_"
+        Warn "⚠️ No se pudo instalar Meslo automáticamente: $_"
         return $false
     }
 }
@@ -135,7 +134,7 @@ if (Get-Command oh-my-posh -ErrorAction SilentlyContinue) {
     Warn "ℹ️ Omitting font install: oh-my-posh no disponible en esta sesión."
 }
 
-# 6) Descargar temas oficiales a carpeta del usuario
+# --- 6) Descargar temas oficiales a carpeta del usuario
 $CustomThemesPath = Join-Path $env:USERPROFILE "oh-my-posh-themes"
 if (-not (Test-Path $CustomThemesPath)) { New-Item -ItemType Directory -Path $CustomThemesPath -Force | Out-Null }
 
@@ -171,7 +170,7 @@ foreach ($theme in $themes) {
 }
 Ok "🎨 Temas disponibles en: $CustomThemesPath"
 
-# 7) Añadir bloque persistente al perfil (Set-PoshTheme + restauración)
+# --- 7) Añadir bloque persistente al perfil (Set-PoshTheme + restauración)
 $ConfigBlock = @'
 # ===== Oh My Posh Persistent Configuration =====
 function Set-PoshTheme {
@@ -214,5 +213,5 @@ if ($profileContent -notlike "*Oh My Posh Persistent Configuration*") {
 }
 
 Ok "`n🎉 Instalación finalizada."
-Info "Recarga el perfil ahora con: . $PROFILE  o cierra y vuelve a abrir PowerShell/Windows Terminal."
+Info "Recarga el perfil con: . $PROFILE  o cierra/abre la terminal para aplicar cambios persistentes."
 Info "Aplica un tema manual: Set-PoshTheme 'tokyo' o oh-my-posh init pwsh --config '$CustomThemesPath\tokyo.json' | Invoke-Expression"
