@@ -1,162 +1,109 @@
-<#
-.SYNOPSIS
-    Automatiza la instalación y configuración de Oh My Posh en Windows 11
-.DESCRIPTION
-    Este script facilita la instalación de Oh My Posh usando winget,
-    descarga la fuente adecuada, configura el perfil de PowerShell y
-    personaliza la apariencia de la terminal de Windows.
-.NOTES
-    Versión: 1.4
-    Autor: ROSN-LR5
-#>
+# install-OhMyPosh 2.1 - ROSN-LR5.ps1
+# Autor: ROSN-LR5
+# Ver. 2.1
+# Descripción: Instala y configura Oh My Posh con varios temas y opción de revertir cambios.
 
-# Es necesario ejecutar el script como administrador para instalar la fuente correctamente
-if (-NOT ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")) {
-    Write-Host "Este script necesita privilegios de administrador para instalar la fuente." -ForegroundColor Red
-    Start-Process powershell.exe "-NoProfile -ExecutionPolicy Bypass -File "$PSCommandPath"" -Verb RunAs
+# --------------------------
+# Paso 1: Verificación de permisos
+# --------------------------
+if (-not ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")) {
+    Write-Host "Por favor, ejecuta este script como Administrador." -ForegroundColor Red
     exit
 }
 
-# Función para comprobar si un comando está disponible en el sistema
-function Check-CommandExistence {
-    param($command)
-    $exists = $null -ne (Get-Command $command -ErrorAction SilentlyContinue)
-    return $exists
+# --------------------------
+# Paso 2: Backup de perfil original
+# --------------------------
+$ProfilePath = $PROFILE
+$BackupPath = "$PROFILE.backup"
+
+if (-not (Test-Path $BackupPath)) {
+    Copy-Item -Path $ProfilePath -Destination $BackupPath -Force -ErrorAction SilentlyContinue
+    Write-Host "✅ Backup del perfil creado en: $BackupPath"
+} else {
+    Write-Host "ℹ️ Ya existe un backup en: $BackupPath"
 }
 
-# Verificar si winget está instalado en el sistema
-if (-not (Check-CommandExistence "winget")) {
-    Write-Host "No se encuentra winget. Instala Windows Package Manager desde la Microsoft Store." -ForegroundColor Red
-    exit
+# --------------------------
+# Paso 3: Instalación de Oh My Posh
+# --------------------------
+Write-Host "`n🔧 Instalando Oh My Posh..."
+
+winget install JanDeDobbeleer.OhMyPosh -s winget -e --accept-source-agreements --accept-package-agreements
+
+# --------------------------
+# Paso 4: Instalar Nerd Fonts
+# --------------------------
+Write-Host "`n🔤 Instalando Nerd Fonts (CascadiaCode)..."
+
+oh-my-posh font install CascadiaCode
+
+# --------------------------
+# Paso 5: Crear carpeta de temas personalizados
+# --------------------------
+$ThemesPath = "$env:USERPROFILE\AppData\Local\Programs\oh-my-posh\themes"
+$CustomThemesPath = "$env:USERPROFILE\oh-my-posh-themes"
+New-Item -ItemType Directory -Path $CustomThemesPath -Force | Out-Null
+
+# Lista de temas
+$themes = @(
+    "M365Princess",
+    "agnoster",
+    "atomic",
+    "cert",
+    "clean-detailed",
+    "cloud-native-azure",
+    "jonnychipz",
+    "kushal",
+    "stelbent.minimal",
+    "tokyo",
+    "glowsticks",
+    "paradox",
+    "jandedobbeleer",
+    "powerlevel10k_rainbow",
+    "minimal",
+    "ys",
+    "default"  # Tema original
+)
+
+# Descargar temas
+foreach ($theme in $themes) {
+    $url = "https://raw.githubusercontent.com/JanDeDobbeleer/oh-my-posh/main/themes/$theme.omp.json"
+    $out = "$CustomThemesPath\$theme.omp.json"
+    Invoke-WebRequest -Uri $url -OutFile $out -ErrorAction SilentlyContinue
 }
 
-Write-Host "=== Instalación de Oh My Posh en curso ===" -ForegroundColor Cyan
-# Instalación de Oh My Posh a través de winget
-winget install JanDeDobbeleer.OhMyPosh -s winget --accept-package-agreements --accept-source-agreements
+Write-Host "`n🎨 Temas descargados en: $CustomThemesPath"
 
-Write-Host "=== Instalando la fuente Meslo LGM NF ===" -ForegroundColor Cyan
-# Descargar e instalar la fuente Meslo LGM NF (compatible con los iconos en la terminal)
-$fontUrl = "https://github.com/ryanoasis/nerd-fonts/releases/download/v3.0.2/Meslo.zip"
-$tempDir = [System.IO.Path]::GetTempPath()
-$fontZip = Join-Path $tempDir "Meslo.zip"
-$fontDir = Join-Path $tempDir "MesloFonts"
-
-# Descargar archivo ZIP con las fuentes
-Invoke-WebRequest -Uri $fontUrl -OutFile $fontZip
-
-# Extraer las fuentes
-if (-not (Test-Path $fontDir)) {
-    New-Item -ItemType Directory -Path $fontDir -Force | Out-Null
+# --------------------------
+# Paso 6: Agregar configuración al perfil
+# --------------------------
+$SetThemeFunction = @"
+function Set-PoshTheme {
+    param([string]`$theme)
+    `$themePath = "`"$CustomThemesPath/\$theme.omp.json`""
+    if (Test-Path \$themePath) {
+        oh-my-posh init pwsh --config \$themePath | Invoke-Expression
+        `$env:POSH_THEME = \$theme
+        Write-Host "Tema aplicado: \$theme" -ForegroundColor Green
+    } else {
+        Write-Host "Tema no encontrado: \$theme" -ForegroundColor Red
+    }
 }
-Expand-Archive -Path $fontZip -DestinationPath $fontDir -Force
-
-# Instalar las fuentes en el sistema
-$shell = New-Object -ComObject Shell.Application
-$fontsFolder = $shell.Namespace(0x14)
-
-Get-ChildItem -Path $fontDir -Recurse -Include "*.ttf" | ForEach-Object {
-    $fontPath = $_.FullName
-    $fontsFolder.CopyHere($fontPath, 0x10)
-}
-
-Write-Host "=== Configuración del perfil de PowerShell ===" -ForegroundColor Cyan
-# Crear el perfil de PowerShell si no existe
-if (-not (Test-Path $PROFILE)) {
-    New-Item -ItemType File -Path $PROFILE -Force
-}
-
-# Configuración personalizada de Oh My Posh en PowerShell
-$ohMyPoshConfig = @"
-# Configuración de Oh My Posh
-oh-my-posh init pwsh --config "$env:POSH_THEMES_PATH\jandedobbeleer.omp.json" | Invoke-Expression
-
-# Alias útiles para la terminal
-Set-Alias -Name ll -Value Get-ChildItem
-Set-Alias -Name grep -Value Select-String
-
-# Personalización de colores para la terminal
-$Host.PrivateData.ErrorForegroundColor = "Red"
-$Host.PrivateData.ErrorBackgroundColor = "Black"
-$Host.PrivateData.WarningForegroundColor = "Yellow"
-$Host.PrivateData.WarningBackgroundColor = "Black"
-$Host.PrivateData.DebugForegroundColor = "Cyan"
-$Host.PrivateData.DebugBackgroundColor = "Black"
-
-# Función para actualizar Oh My Posh a la última versión
-function Update-Posh {
-    winget upgrade JanDeDobbeleer.OhMyPosh -s winget --accept-package-agreements --accept-source-agreements
-    oh-my-posh font install
-    Write-Host "Oh My Posh se ha actualizado con éxito." -ForegroundColor Green
-}
+Set-PoshTheme "jandedobbeleer"
 "@
 
-# Guardar la configuración en el perfil de PowerShell
-Set-Content -Path $PROFILE -Value $ohMyPoshConfig
+# Agregar al perfil
+Add-Content -Path $ProfilePath -Value "`n# Oh My Posh Configuration"
+Add-Content -Path $ProfilePath -Value "Import-Module oh-my-posh"
+Add-Content -Path $ProfilePath -Value $SetThemeFunction
 
-Write-Host "=== Personalizando la Terminal de Windows ===" -ForegroundColor Cyan
-# Configuración JSON para la Terminal de Windows
-$terminalSettings = @"
-{
-    "profiles": {
-        "defaults": {
-            "font": {
-                "face": "MesloLGL Nerd Font",
-                "size": 15
-            },
-            "opacity": 85,
-            "useAcrylic": true
-        },
-        "list": [
-            {
-                "commandline": "powershell.exe -NoExit -Command \",
-                "guid": "{61c54bbd-c2c6-5271-96e7-009a87ff44bf}",
-                "hidden": false,
-                "name": "PowerShell Personalizado",
-                "startingDirectory": "%USERPROFILE%"
-            }
-        ]
-    },
-    "schemes": [
-        {
-            "background": "#012456",
-            "black": "#0C0C0C",
-            "blue": "#0037DA",
-            "brightBlack": "#767676",
-            "brightBlue": "#3B78FF",
-            "brightCyan": "#61D6D6",
-            "brightGreen": "#16C60C",
-            "brightPurple": "#B4009E",
-            "brightRed": "#E74856",
-            "brightWhite": "#F2F2F2",
-            "brightYellow": "#F9F1A5",
-            "cyan": "#3A96DD",
-            "foreground": "#CCCCCC",
-            "green": "#13A10E",
-            "name": "Custom Blue",
-            "purple": "#881798",
-            "red": "#C50F1F",
-            "white": "#CCCCCC",
-            "yellow": "#C19C00"
-        }
-    ],
-    "theme": "dark"
-}
-"@
+Write-Host "`n✅ Perfil actualizado. Tema inicial: jandedobbeleer"
 
-# Guardar configuración de la terminal en el archivo JSON
-$terminalSettingsPath = "$env:LOCALAPPDATA\Packages\Microsoft.WindowsTerminal_8wekyb3d8bbwe\LocalState\settings.json"
-if (Test-Path $terminalSettingsPath) {
-    $backupPath = "$terminalSettingsPath.backup_$(Get-Date -Format 'yyyyMMddHHmmss')"
-    Copy-Item -Path $terminalSettingsPath -Destination $backupPath -Force
-    Write-Host "Se ha guardado una copia de seguridad de la configuración anterior en $backupPath" -ForegroundColor Yellow
-}
-
-Set-Content -Path $terminalSettingsPath -Value $terminalSettings
-
-Write-Host "=== Instalación completada ===" -ForegroundColor Green
-Write-Host "1. Oh My Posh ha sido instalado correctamente."
-Write-Host "2. La fuente Meslo LGM NF ha sido instalada."
-Write-Host "3. El perfil de PowerShell ha sido configurado."
-Write-Host "4. La Terminal de Windows ha sido personalizada."
-Write-Host "Por favor, cierra y vuelve a abrir la Terminal para ver los cambios." -ForegroundColor Yellow
-Write-Host "En la nueva terminal, selecciona 'PowerShell Personalizado' y configura la fuente MesloLGM NF en la configuración." -ForegroundColor Yellow
+# --------------------------
+# Paso 7: Final
+# --------------------------
+Write-Host "`n🎉 Instalación completada. Cierra y vuelve a abrir PowerShell o ejecuta:"
+Write-Host "`n    . $PROFILE" -ForegroundColor Cyan
+Write-Host "`nLuego puedes cambiar el tema con:"
+Write-Host "`n    Set-PoshTheme 'tokyo'" -ForegroundColor Yellow
