@@ -1,7 +1,7 @@
 # uninstall-oh-my-posh-ROSN-LR5.ps1
-# Autor: ROSN-LR5 (corrección)
-# Versión: 3.2.1
-# Requisitos: PowerShell 7.x. Ejecutar como Administrador para borrar Program Files.
+# Autor: ROSN-LR5 (corrección segura)
+# Versión: 3.2.2
+# Ejecutar preferiblemente con PowerShell 7 y permisos de Administrador si desea eliminar Program Files.
 
 [CmdletBinding()]
 param()
@@ -23,7 +23,8 @@ if (Test-Path $BackupPath) {
         Remove-Item -Path $BackupPath -Force -ErrorAction SilentlyContinue
         Write-Ok "✅ Perfil restaurado desde backup: $BackupPath -> $ProfilePath"
     } catch {
-        Write-Warn "⚠️ Error restaurando perfil desde backup: $_"
+        Write-Warn "⚠️ Error restaurando perfil desde backup."
+        Write-Host "        $_"
     }
 } else {
     Write-Warn "⚠️ No se encontró backup del perfil en: $BackupPath"
@@ -36,7 +37,8 @@ if (Test-Path $Themes) {
         Remove-Item -Recurse -Force -Path $Themes
         Write-Ok "🗑️ Carpeta de temas borrada: $Themes"
     } catch {
-        Write-Warn "⚠️ Error borrando carpeta de temas: $_"
+        Write-Warn "⚠️ Error borrando carpeta de temas."
+        Write-Host "        $_"
     }
 } else {
     Write-Info "ℹ️ No existe carpeta de temas: $Themes"
@@ -49,7 +51,8 @@ if (Test-Path $themeStore) {
         Remove-Item -Force -Path $themeStore
         Write-Ok "🗑️ Archivo .poshtheme eliminado: $themeStore"
     } catch {
-        Write-Warn "⚠️ Error eliminando $themeStore: $_"
+        Write-Warn "⚠️ Error eliminando .poshtheme."
+        Write-Host "        $_"
     }
 } else {
     Write-Info "ℹ️ No existe archivo .poshtheme"
@@ -63,11 +66,9 @@ try {
         $startToken = '# ===== Oh My Posh Persistent Configuration ====='
         $endToken   = '# ===== end persistent config ====='
 
-        # Construir patrón regex de forma segura usando Regex.Escape y Singleline
         $pattern = [System.Text.RegularExpressions.Regex]::Escape($startToken) + '.*?' + [System.Text.RegularExpressions.Regex]::Escape($endToken)
         $newContent = [System.Text.RegularExpressions.Regex]::Replace($content, $pattern, '', [System.Text.RegularExpressions.RegexOptions]::Singleline)
 
-        # Si cambió el contenido, guardarlo
         if ($newContent -ne $content) {
             Set-Content -Path $ProfilePath -Value $newContent -Force
             Write-Ok "✅ Bloque persistente eliminado del perfil: $ProfilePath"
@@ -78,7 +79,8 @@ try {
         Write-Warn "⚠️ Perfil no encontrado en: $ProfilePath"
     }
 } catch {
-    Write-Warn "⚠️ Error al procesar el perfil: $_"
+    Write-Warn "⚠️ Error al procesar el perfil."
+    Write-Host "        $_"
 }
 
 # 5) Eliminar binarios instalados en rutas comunes (LOCALAPPDATA o ProgramFiles)
@@ -95,9 +97,11 @@ foreach ($d in $possibleDirs) {
     if (Test-Path $d) {
         try {
             Remove-Item -Recurse -Force -Path $d
-            Write-Ok "🗑️ Eliminado: $d"
+            Write-Ok ("🗑️ Eliminado: " + $d)
         } catch {
-            Write-Warn "⚠️ Error borrando $d: $_"
+            Write-Warn "⚠️ Error borrando ruta. Ver detalles:"
+            Write-Host "        $d"
+            Write-Host "        $_"
         }
     }
 }
@@ -107,9 +111,10 @@ if (Get-Command winget -ErrorAction SilentlyContinue) {
     try {
         Write-Info "📦 Intentando desinstalación vía winget..."
         winget uninstall JanDeDobbeleer.OhMyPosh -e
-        Write-Ok "✅ Intentada desinstalación vía winget (verifica si aparece en Agregar o quitar programas)."
+        Write-Ok "✅ Intentada desinstalación vía winget (verifica en Agregar o quitar programas)."
     } catch {
-        Write-Warn "⚠️ winget no pudo desinstalar automáticamente: $_"
+        Write-Warn "⚠️ winget no pudo desinstalar automáticamente."
+        Write-Host "        $_"
     }
 } else {
     Write-Info "ℹ️ winget no disponible en este equipo. Verifica manualmente en 'Agregar o quitar programas'."
