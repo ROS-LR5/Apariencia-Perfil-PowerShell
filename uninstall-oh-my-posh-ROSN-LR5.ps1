@@ -1,71 +1,55 @@
-# uninstall-oh-my-posh-persist-ROSN-LR5.ps1
+# uninstall-oh-my-posh-ROSN-LR5.ps1
 # Autor: ROSN-LR5 (mejora)
-# Version: 3.1
+# Versión: 3.2
 
-Write-Host "🧹 Iniciando desinstalacion y limpieza Oh My Posh..." -ForegroundColor Red
+Write-Host "🧹 Desinstalando Oh My Posh y limpiando..." -ForegroundColor Red
 
 $ProfilePath = $PROFILE
 $BackupPath = "$ProfilePath.backup"
 
-# Restaurar perfil desde backup si existe
+# Restaurar perfil desde backup
 if (Test-Path $BackupPath) {
     try {
         Copy-Item -Path $BackupPath -Destination $ProfilePath -Force
         Remove-Item -Path $BackupPath -Force -ErrorAction SilentlyContinue
         Write-Host "✅ Perfil restaurado desde backup."
     } catch {
-        Write-Host "⚠️ Fallo al restaurar perfil: $_" -ForegroundColor Yellow
+        Write-Host "⚠️ Error restaurando backup: $_" -ForegroundColor Yellow
     }
 } else {
     Write-Host "⚠️ No se encontró backup del perfil." -ForegroundColor Yellow
 }
 
-# Eliminar carpeta local de temas
+# Eliminar carpeta de temas
 $Themes = Join-Path $env:USERPROFILE "oh-my-posh-themes"
 if (Test-Path $Themes) {
-    try {
-        Remove-Item -Recurse -Force -Path $Themes
-        Write-Host "🗑️ Carpeta de temas borrada: $Themes"
-    } catch {
-        Write-Host "⚠️ Error borrando carpeta de temas: $_" -ForegroundColor Yellow
-    }
-} else {
-    Write-Host "ℹ️ No existe carpeta de temas local."
-}
+    try { Remove-Item -Recurse -Force -Path $Themes; Write-Host "🗑️ Carpeta de temas borrada: $Themes" } catch { Write-Host "⚠️ Error borrando temas: $_" -ForegroundColor Yellow }
+} else { Write-Host "ℹ️ No existe carpeta de temas local." -ForegroundColor Cyan }
 
-# Eliminar archivo de tema persistente
+# Eliminar .poshtheme
 $themeStore = Join-Path $env:USERPROFILE ".poshtheme"
-if (Test-Path $themeStore) {
-    Remove-Item $themeStore -Force -ErrorAction SilentlyContinue
-    Write-Host "🗑️ Archivo .poshtheme eliminado."
-} else {
-    Write-Host "ℹ️ No existe archivo .poshtheme."
-}
+if (Test-Path $themeStore) { Remove-Item $themeStore -Force -ErrorAction SilentlyContinue; Write-Host "🗑️ Archivo .poshtheme eliminado." } else { Write-Host "ℹ️ No existe archivo .poshtheme." -ForegroundColor Cyan }
 
-# Eliminar bloque de configuración persistente del perfil (intento seguro)
-try {
-    $content = Get-Content -Path $ProfilePath -Raw
-    $startToken = "# ===== Oh My Posh Persistent Configuration ====="
-    if ($content -like "*$startToken*") {
-        # remover desde startToken hasta "end persistent config" (simple)
-        $pattern = [regex]::Escape($startToken) + "(.|\n)*?# ===== end persistent config ====="
-        $new = [regex]::Replace($content, $pattern, "", [System.Text.RegularExpressions.RegexOptions]::IgnoreCase)
-        Set-Content -Path $ProfilePath -Value $new -Force
-        Write-Host "✅ Bloque persistente eliminado del perfil."
-    } else {
-        Write-Host "ℹ️ No se encontró bloque persistente en el perfil."
+# Intentar remover bin instalado en ProgramFiles o LOCALAPPDATA
+$possibleDirs = @(
+    Join-Path $env:ProgramFiles "oh-my-posh\bin",
+    Join-Path $env:LOCALAPPDATA "Programs\oh-my-posh\bin",
+    Join-Path $env:LOCALAPPDATA "Programs\oh-my-posh"
+)
+foreach ($d in $possibleDirs) {
+    if (Test-Path $d) {
+        try { Remove-Item -Recurse -Force -Path $d; Write-Host "🗑️ Eliminado: $d" } catch { Write-Host "⚠️ Error borrando $d: $_" -ForegroundColor Yellow }
     }
-} catch {
-    Write-Host "⚠️ Error procesando el perfil: $_" -ForegroundColor Yellow
 }
 
 # Desinstalar via winget si disponible
 if (Get-Command winget -ErrorAction SilentlyContinue) {
-    Write-Host "📦 Desinstalando Oh My Posh via winget..."
-    winget uninstall JanDeDobbeleer.OhMyPosh -e
-    Write-Host "✅ Desinstalacion intentada via winget."
+    try {
+        winget uninstall JanDeDobbeleer.OhMyPosh -e
+        Write-Host "📦 Intentada desinstalación via winget."
+    } catch { Write-Host "⚠️ winget no pudo desinstalar automáticamente: $_" -ForegroundColor Yellow }
 } else {
-    Write-Host "⚠️ winget no disponible. Desinstala Oh My Posh manualmente si lo deseas." -ForegroundColor Yellow
+    Write-Host "ℹ️ winget no disponible. Comprueba en 'Agregar o quitar programas' para desinstalar si es necesario." -ForegroundColor Cyan
 }
 
-Write-Host "`n🧽 Limpieza finalizada. Reinicia PowerShell o la terminal para ver cambios." -ForegroundColor Green
+Write-Host "`n🧽 Limpieza finalizada. Reinicia la terminal para aplicar cambios." -ForegroundColor Green
