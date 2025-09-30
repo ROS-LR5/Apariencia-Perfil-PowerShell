@@ -1,7 +1,7 @@
 # uninstall-oh-my-posh-ROSN-LR5.ps1
 # Autor: ROSN-LR5
-# Versión: 4.0
-# Requisitos: PowerShell 7.x. Ejecutar como Administrador para borrar Program Files (opcional).
+# Versión: 4.1
+# Requisitos: PowerShell 7.x. Ejecuta como Administrador para borrar Program Files (opcional).
 [CmdletBinding()]
 param()
 
